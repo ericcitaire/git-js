@@ -160,30 +160,18 @@ export class GitExecutorChain implements SimpleGitExecutor {
          const stdOut: Buffer[] = [];
          const stdErr: Buffer[] = [];
 
-         let attempted = false;
          let rejection: Maybe<Error>;
+         let timeout: NodeJS.Timeout;
 
-         function attemptClose(exitCode: number, event: string = 'retry') {
-
-            // closing when there is content, terminate immediately
-            if (attempted || stdErr.length || stdOut.length) {
-               logger.info(`exitCode=%s event=%s rejection=%o`, exitCode, event, rejection);
-               done({
-                  stdOut,
-                  stdErr,
-                  exitCode,
-                  rejection,
-               });
-               attempted = true;
+         function attemptClose(exitCode: number, event: string) {
+            if (event == 'close' || event == 'deferred') {
+               if (timeout !== undefined) {
+                  clearTimeout(timeout);
+               }
+               done({stdOut, stdErr, exitCode, rejection});
+            } else if (event == 'exit') {
+               timeout = setTimeout(() => attemptClose(exitCode, 'deferred'), 500);
             }
-
-            // first attempt at closing but no content yet, wait briefly for the close/exit that may follow
-            if (!attempted) {
-               attempted = true;
-               setTimeout(() => attemptClose(exitCode, 'deferred'), 50);
-               logger('received %s event before content on stdOut/stdErr', event)
-            }
-
          }
 
          logger.info(`%s %o`, command, args);

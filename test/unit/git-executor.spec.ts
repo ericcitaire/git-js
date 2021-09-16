@@ -18,7 +18,7 @@ async function childProcessEmits(event: 'close' | 'exit', code: number, before?:
    await wait();
 }
 
-const aWhile = () => wait(50);
+const aWhile = () => wait(500);
 
 describe('git-executor', () => {
    let git: SimpleGit;
@@ -43,13 +43,10 @@ describe('git-executor', () => {
       task = git.init(callback);
    }
 
-   it('with no stdErr and just a close event, terminates after a delay', async () => {
+   it('with no stdErr and just a close event, terminates immediately', async () => {
       givenTheTaskIsAdded();
 
       await childProcessEmits('close', 0);
-      await thenTheTaskHasNotCompleted();
-
-      await aWhile();
       await thenTheTaskHasCompleted()
    });
 
@@ -70,10 +67,13 @@ describe('git-executor', () => {
       await thenTheTaskHasCompleted()
    });
 
-   it('with stdErr and just an exit event, terminates immediately', async () => {
+   it('with stdErr and just an exit event, terminates after a delay', async () => {
       givenTheTaskIsAdded();
 
       await childProcessEmits('exit', 0, withStdErr);
+      await thenTheTaskHasNotCompleted();
+
+      await aWhile();
       await thenTheTaskHasCompleted()
    });
 
@@ -84,10 +84,13 @@ describe('git-executor', () => {
       await thenTheTaskHasCompleted()
    });
 
-   it('with stdOut and just an exit event, terminates immediately', async () => {
+   it('with stdOut and just an exit event, terminates after a delay', async () => {
       givenTheTaskIsAdded();
 
       await childProcessEmits('exit', 0, withStdOut);
+      await thenTheTaskHasNotCompleted();
+
+      await aWhile();
       await thenTheTaskHasCompleted()
    });
 
